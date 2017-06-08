@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import PropTypes from '../../prop_types';
 import { FormActions } from '../../actions';
-import $ from 'jquery';
+import Realize from '../../realize';
 import { mixin, autobind } from '../../utils/decorators';
 
 import {
@@ -142,37 +142,36 @@ export default class Form extends Component {
 
   ajaxSubmit(postData) {
     let submitOptions = {
-      url: this.props.action,
       method: this.props.method,
-      data: postData,
-      success: (...args) => this.handleSuccess(...args),
-      error: (...args) => this.handleError(...args),
+      data: postData
     };
 
     if (!!this.props.dataType) {
       submitOptions.dataType = this.props.dataType;
     }
 
-    if (!!this.props.contentType) {
+    if (this.props.multipart) {
+      submitOptions = $.extend({}, submitOptions, this.multiPartData);
+    } else if (!!this.props.contentType) {
       submitOptions.contentType = this.props.contentType;
-
       if (submitOptions.contentType === 'application/json') {
         submitOptions.data = JSON.stringify(postData);
       }
     }
 
-    if (this.props.multipart) {
+    const promise = Realize.config.httpClient(this.props.action, submitOptions);
+    promise.then((...args) => this.handleSuccess(...args));
+    promise.catch((...args) => this.handleError(...args));
+  }
+
+  get multiPartData(){
       const fd = new FormData(ReactDOM.findDOMNode(this.refs.form));
-      const multipartOptions = {
+      return multipartOptions = {
         data: fd,
         enctype: 'multipart/form-data',
         processData: false,
         contentType: false,
       };
-      submitOptions = $.extend({}, submitOptions, multipartOptions);
-    }
-
-    $.ajax(submitOptions);
   }
 
   formSubmit() {
